@@ -10,16 +10,13 @@ resource "azurerm_automation_account" "aks" {
   location            = var.location
   resource_group_name = var.resource_group
   sku_name            = "Basic"
-
-  identity {
-    type = "SystemAssigned"
-  }
+  identity { type = "SystemAssigned" }
 }
 
 resource "azurerm_role_assignment" "automation_contributor" {
   principal_id         = azurerm_automation_account.aks.identity[0].principal_id
   role_definition_name = "Contributor"
-  scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group}/providers/Microsoft.ContainerService/managedClusters/${var.aks_name}"
+  scope = "/subscriptions/${var.subscription_id}/resourcegroups/${var.resource_group}/providers/Microsoft.ContainerService/managedClusters/${var.aks_name}"
 }
 
 resource "azurerm_automation_runbook" "start_aks" {
@@ -27,10 +24,10 @@ resource "azurerm_automation_runbook" "start_aks" {
   location                = var.location
   resource_group_name     = var.resource_group
   automation_account_name = azurerm_automation_account.aks.name
-  log_verbose             = true
-  log_progress            = true
   runbook_type            = "PowerShell"
   content                 = file("${path.module}/scripts/start-aks.ps1")
+  log_verbose             = true
+  log_progress            = true
 }
 
 resource "azurerm_automation_runbook" "stop_aks" {
@@ -38,10 +35,10 @@ resource "azurerm_automation_runbook" "stop_aks" {
   location                = var.location
   resource_group_name     = var.resource_group
   automation_account_name = azurerm_automation_account.aks.name
-  log_verbose             = true
-  log_progress            = true
   runbook_type            = "PowerShell"
   content                 = file("${path.module}/scripts/stop-aks.ps1")
+  log_verbose             = true
+  log_progress            = true
 }
 
 resource "azurerm_automation_schedule" "start_schedule" {
@@ -71,6 +68,11 @@ resource "azurerm_automation_job_schedule" "start_binding" {
   resource_group_name     = var.resource_group
   runbook_name            = azurerm_automation_runbook.start_aks.name
   schedule_name           = azurerm_automation_schedule.start_schedule.name
+
+  parameters = {
+    resourcegroup = var.resource_group
+    aksname       = var.aks_name
+  }
 }
 
 resource "azurerm_automation_job_schedule" "stop_binding" {
@@ -78,4 +80,9 @@ resource "azurerm_automation_job_schedule" "stop_binding" {
   resource_group_name     = var.resource_group
   runbook_name            = azurerm_automation_runbook.stop_aks.name
   schedule_name           = azurerm_automation_schedule.stop_schedule.name
+
+  parameters = {
+    resourcegroup = var.resource_group
+    aksname       = var.aks_name
+  }
 }
